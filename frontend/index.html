@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Saving & Loan DApp</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+      background-color: #f4f6f9;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background-color: #2c3e50;
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+    h1 {
+      margin: 0;
+      font-size: 2em;
+    }
+    .container {
+      max-width: 900px;
+      margin: 30px auto;
+      padding: 20px;
+      background-color: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    .section {
+      margin-bottom: 25px;
+    }
+    h2 {
+      color: #34495e;
+    }
+    .button {
+      background-color: #3498db;
+      color: white;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 1.1em;
+      width: 100%;
+      transition: background-color 0.3s ease;
+    }
+    .button:hover {
+      background-color: #2980b9;
+    }
+    .balance {
+      font-size: 1.5em;
+      font-weight: bold;
+      color: #27ae60;
+      margin-bottom: 10px;
+    }
+    .alert {
+      padding: 10px;
+      background-color: #f39c12;
+      color: white;
+      border-radius: 5px;
+      margin-top: 10px;
+      text-align: center;
+      display: none;
+    }
+    .info {
+      background-color: #ecf0f1;
+      padding: 15px;
+      border-radius: 5px;
+      margin-top: 15px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Saving & Loan DApp</h1>
+  </header>
+
+  <div class="container">
+
+    <div class="section">
+      <h2>Balance</h2>
+      <div class="balance" id="balance">Balance: 0 ETH</div>
+    </div>
+
+    <div class="section">
+      <button class="button" id="depositButton">Deposit 1 ETH</button>
+    </div>
+
+    <div class="section">
+      <button class="button" id="withdrawButton">Withdraw 1 ETH</button>
+    </div>
+
+    <div class="section">
+      <button class="button" id="requestLoanButton">Request Loan (Collateral 1 ETH)</button>
+    </div>
+
+    <div class="section">
+      <button class="button" id="repayLoanButton">Repay Loan</button>
+    </div>
+
+    <div class="alert" id="alert"></div>
+
+    <div class="info">
+      <h3>Important:</h3>
+      <p>Make sure to connect MetaMask to the Hardhat network and have some ETH available in your account for transactions.</p>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <script>
+    const contractAddress = "0xYourContractAddress"; // Reemplaza con la dirección de tu contrato
+    const contractABI = [
+      // Tu ABI aquí
+    ];
+
+    let ethereum;
+
+    // Función para verificar MetaMask y conectar
+    async function checkMetaMask() {
+      if (typeof window.ethereum !== "undefined") {
+        ethereum = window.ethereum;
+        console.log("MetaMask is detected!");
+        
+        // Intentamos acceder a las cuentas
+        try {
+          const accounts = await ethereum.request({ method: "eth_requestAccounts" });
+          console.log("Connected accounts: ", accounts);
+        } catch (error) {
+          console.error("User denied account access", error);
+          alert("Please connect MetaMask and grant access to the DApp.");
+        }
+      } else {
+        console.error("MetaMask is not detected.");
+        alert("Please install MetaMask to interact with this DApp.");
+      }
+    }
+
+    // Función de conexión y configuración del proveedor de Ethereum
+    async function setupEthereumProvider() {
+      const provider = new ethers.providers.Web3Provider(ethereum);
+      return provider.getSigner();
+    }
+
+    // Función para mostrar alertas
+    function showAlert(message) {
+      const alert = document.getElementById("alert");
+      alert.innerText = message;
+      alert.style.display = "block";
+      setTimeout(() => {
+        alert.style.display = "none";
+      }, 3000);
+    }
+
+    // Obtener saldo del contrato
+    async function getBalance() {
+      try {
+        const signer = await setupEthereumProvider();
+        const contract = new ethers.Contract(contractAddress, contractABI, signer);
+        const balance = await contract.balanceOf(await signer.getAddress());
+        document.getElementById("balance").innerText = `Balance: ${ethers.utils.formatEther(balance)} ETH`;
+      } catch (error) {
+        console.error("Error getting balance: ", error);
+      }
+    }
+
+    // Función para depositar
+    async function depositFunds() {
+      try {
+        const amount = ethers.utils.parseEther("1");
+        const signer = await setupEthereumProvider();
+        const contract = new ethers.Contract(contractAddress, contractABI, signer);
+        const tx = await contract.deposit({ value: amount });
+        await tx.wait();
+        showAlert("Deposit successful!");
+        getBalance();
+      } catch (error) {
+        showAlert("Error during deposit: " + error.message);
+      }
+    }
+
+    // Función para retirar fondos
+    async function withdrawFunds() {
+      try {
+        const amount = ethers.utils.parseEther("1");
+        const signer = await setupEthereumProvider();
+        const contract = new ethers.Contract(contractAddress, contractABI, signer);
+        const tx = await contract.withdraw(amount);
+        await tx.wait();
+        showAlert("Withdrawal successful!");
+        getBalance();
+      } catch (error) {
+        showAlert("Error during withdrawal: " + error.message);
+      }
+    }
+
+    // Función para solicitar un préstamo
+    async function requestLoan() {
+      try {
+        const collateral = ethers.utils.parseEther("1");
+        const signer = await setupEthereumProvider();
+        const contract = new ethers.Contract(contractAddress, contractABI, signer);
+        const tx = await contract.requestLoan(collateral);
+        await tx.wait();
+        showAlert("Loan requested successfully!");
+        getBalance();
+      } catch (error) {
+        showAlert("Error during loan request: " + error.message);
+      }
+    }
+
+    // Función para devolver un préstamo
+    async function repayLoan() {
+      try {
+        const signer = await setupEthereumProvider();
+        const contract = new ethers.Contract(contractAddress, contractABI, signer);
+        const tx = await contract.repayLoan();
+        await tx.wait();
+        showAlert("Loan repaid successfully!");
+        getBalance();
+      } catch (error) {
+        showAlert("Error during loan repayment: " + error.message);
+      }
+    }
+
+    // Cuando cargue la página
+    window.onload = async () => {
+      await checkMetaMask();  // Verifica si MetaMask está instalado y conectado
+      getBalance();  // Obtiene el saldo
+
+      // Asigna los eventos de los botones
+      document.getElementById("depositButton").onclick = depositFunds;
+      document.getElementById("withdrawButton").onclick = withdrawFunds;
+      document.getElementById("requestLoanButton").onclick = requestLoan;
+      document.getElementById("repayLoanButton").onclick = repayLoan;
+    };
+  </script>
+</body>
+</html>
